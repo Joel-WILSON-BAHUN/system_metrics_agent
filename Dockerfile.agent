@@ -15,6 +15,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
 # procps fournit la commande `uptime` (absente de python:slim)
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends procps \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 app \
