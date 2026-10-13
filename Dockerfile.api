@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+ARG PYTHON_IMAGE=python:3.12.12-slim-bookworm
+
+# ---------- Étape 1 : builder (installe les dépendances) ----------
+FROM ${PYTHON_IMAGE} AS builder
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+WORKDIR /build
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+# requirements.txt copié avant le code : cache de couches préservé
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# ---------- Étape 2 : image finale (sans outils de build) ----------
+FROM ${PYTHON_IMAGE} AS final
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --no-create-home \
+       --shell /usr/sbin/nologin app
+WORKDIR /app
+COPY --from=builder /opt/venv /opt/venv
+COPY --chown=app:app app/ ./app/
+USER app
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)" || exit 1
+CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
