@@ -33,6 +33,7 @@ def test_get_load_average_command_error(mock_run):
     with pytest.raises(MetricsCollectionError):
         get_load_average()
 
+
 @patch("app.collector.get_load_average")
 @patch("app.collector.psutil.cpu_percent")
 @patch("app.collector.psutil.cpu_count")
